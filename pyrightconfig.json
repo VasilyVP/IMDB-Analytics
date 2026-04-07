@@ -1,0 +1,15 @@
+{
+  "typeCheckingMode": "strict",
+  "exclude": ["**/node_modules", "**/__pycache__", "**/.venv", "**/.git", "**/.*", "tests"],
+  "pythonVersion": "3.14",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": true,
+  "reportUnusedVariable": true,
+  "reportGeneralTypeIssues": true,
+  "reportOptionalMemberAccess": true,
+  "reportOptionalSubscript": true,
+  "reportOptionalCall": true,
+  "reportOptionalIterable": true,
+  "reportOptionalContextManager": true,
+  "reportOptionalOperand": true
+}

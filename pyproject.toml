@@ -1,0 +1,11 @@
+[project]
+name = "movies"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "duckdb",
+    "neo4j>=5.0",
+    "python-dotenv",
+]
