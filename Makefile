@@ -20,6 +20,10 @@ seed-sample:
 	@uv run python scripts/imdb_seed.py
 	@uv run python scripts/neo4j_seed.py --limit 1000
 
+# Run back-end unit tests
+test:
+	@uv run --directory back-end python -m unittest discover -s tests -p "test_*.py"
+
 # Resume previously stopped containers (no config reload)
 start:
 	@docker compose start --wait
@@ -47,6 +51,10 @@ dev:
 	@concurrently -n "FastAPI,Vite" -c "green,yellow" \
 		"uv run --directory back-end fastapi dev app/main.py" \
 		"cd front-end && bun run dev"
+
+prod:
+	@echo "Starting production servers..."
+	fastapi run --directory back-end app/main.py
 
 # Tail logs from all services
 logs:

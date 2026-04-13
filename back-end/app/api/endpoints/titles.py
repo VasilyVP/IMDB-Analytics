@@ -2,19 +2,23 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Query
 
 from app.api.dependencies import DuckDBDep
-from app.schemas.title import Title
-from app.services import title_service
-from app.schemas.common import CommonListQueryParams
+from app.schemas.filter_options import FilterOptionsResponse
+from app.services import filter_service
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[Title])
-def list_titles(
+@router.get("/filters", response_model=FilterOptionsResponse)
+def get_title_filters(
     duckdb: DuckDBDep,
-    params: Annotated[CommonListQueryParams, Depends()],
-) -> list[Title]:
-    return title_service.get_titles(duckdb, params.limit, params.skip)
+    top_rated: Annotated[bool, Query(alias="topRated")] = False,
+    most_popular: Annotated[bool, Query(alias="mostPopular")] = False,
+) -> FilterOptionsResponse:
+    return filter_service.get_filter_options(
+        duckdb,
+        top_rated=top_rated,
+        most_popular=most_popular,
+    )

@@ -2,35 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BarChart3, TrendingUp, Users, Award } from "lucide-react";
-
-const quickQueries = [
-  { icon: TrendingUp, label: "Top Rated", description: "Highest rated titles" },
-  { icon: Users, label: "Most Popular", description: "By number of votes" },
-  { icon: Award, label: "Award Winners", description: "Oscar & Emmy winners" },
-  { icon: BarChart3, label: "Trending", description: "Recent popularity surge" },
-];
 
 export function QueryPanel() {
   return (
     <div className="space-y-6">
-      {/* Quick Queries */}
-      <div className="space-y-3">
-        <Label className="text-xs text-neutral-400">Quick Queries</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {quickQueries.map((query, idx) => (
-            <button
-              key={idx}
-              className="p-3 rounded-lg border border-neutral-800 bg-neutral-900/50 hover:bg-neutral-900 hover:border-neutral-700 transition-colors text-left"
-            >
-              <query.icon className="w-4 h-4 text-neutral-400 mb-2" />
-              <div className="text-xs text-neutral-300">{query.label}</div>
-              <div className="text-[10px] text-neutral-600">{query.description}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Aggregation Builder */}
       <div className="space-y-3">
         <Label className="text-xs text-neutral-400">Aggregation</Label>

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Downloads IMDB dataset files, converts them to Parquet, and rebuilds the local DuckDB database (`back-end/data/imdb.duckdb`). Includes a staleness check — if all Parquet files are younger than 30 days the script exits immediately without re-downloading.
+Downloads IMDB dataset files, converts them to Parquet, and rebuilds the local DuckDB database (`back-end/data/imdb.duckdb`). Includes a staleness check — if all Parquet files are younger than 30 days the script skips re-download work but still rebuilds DuckDB from existing Parquet files.
 
 ---
 
@@ -48,21 +48,34 @@ Processing order is fixed: `title.basics` → `title.principals` → `title.rati
 
 ## Execution Phases
 
-1. **Staleness check** — if all four Parquet files exist and are younger than `STALENESS_DAYS`, print a message and exit with code `0`.
+1. **Staleness check** — if all four Parquet files exist and are younger than `STALENESS_DAYS`, skip phases 2-5 and proceed to phase 6.
 2. **Report stale files** — list each missing or outdated Parquet file with its reason (`missing` or `older than 30 days`).
 3. **Download** — download each `.tsv.gz` file sequentially to `SOURCES_DIR`, printing progress as percentage and MB.
 4. **Decompress** — decompress each `.gz` file to a `.tsv` file in the same directory.
 5. **Convert to Parquet** — convert each `.tsv` to Parquet using an in-memory DuckDB connection; IMDB null sentinel `\N` is mapped to SQL `NULL`.
-6. **Rebuild DuckDB** — drop and recreate all four tables in `imdb.duckdb` from the Parquet files.
+6. **Rebuild DuckDB** — delete `imdb.duckdb` if it exists, then create all four tables from the Parquet files.
 7. **Cleanup** — delete all `.gz` and `.tsv` files from `SOURCES_DIR`.
 
 ---
 
 ## Parquet Conversion Details
 
-### General datasets (`title.basics`, `title.principals`, `title.ratings`)
+### General datasets (`title.principals`, `title.ratings`)
 
-All columns are read as-is from the TSV with `\N` replaced by `NULL`. No column filtering is applied.
+All columns are read as-is from the TSV with `\N` replaced by `NULL`. No row filtering is applied.
+
+### `title.basics`
+
+All columns are read from the TSV with `\N` replaced by `NULL`, but rows are filtered to exclude:
+
+- `titleType = 'tvEpisode'`
+- `titleType = 'videoGame'`
+
+Equivalent filter condition:
+
+```sql
+WHERE titleType NOT IN ('tvEpisode', 'videoGame')
+```
 
 ### `name.unique` (filtered from `name.basics`)
 
@@ -85,10 +98,9 @@ This is why `title.basics.parquet` and `title.principals.parquet` must be writte
 
 ## DuckDB Rebuild
 
-Each table is rebuilt with:
+DuckDB is rebuilt by deleting the database file first (if present), then creating tables from Parquet:
 
 ```sql
-DROP TABLE IF EXISTS <table>;
 CREATE TABLE <table> AS SELECT * FROM read_parquet('<path>');
 ```
 
@@ -102,7 +114,7 @@ DuckDB holds an exclusive lock on `imdb.duckdb` during this phase — no concurr
 
 | File path                            | Description                          |
 |--------------------------------------|--------------------------------------|
-| `back-end/data/title.basics.parquet`     | All title records                    |
+| `back-end/data/title.basics.parquet`     | Title records excluding `tvEpisode` and `videoGame` |
 | `back-end/data/title.principals.parquet` | Title-person principal records       |
 | `back-end/data/title.ratings.parquet`    | Title rating records                 |
 | `back-end/data/name.unique.parquet`      | Person records linked to ≥1 title    |
@@ -114,6 +126,6 @@ Intermediate `.gz` and `.tsv` files in `back-end/data/sources/` are removed afte
 
 ## Staleness Logic
 
-A Parquet file is considered **fresh** if it exists and its modification time is less than 30 days ago (UTC). If **all** Parquet files are fresh the entire pipeline is skipped. If **any** file is stale or missing, all datasets are re-downloaded and all Parquet files are regenerated.
+A Parquet file is considered **fresh** if it exists and its modification time is less than 30 days ago (UTC). If **all** Parquet files are fresh, the script skips download/decompression/conversion work and still rebuilds DuckDB from those Parquet files. If **any** file is stale or missing, all datasets are re-downloaded and all Parquet files are regenerated before DuckDB is rebuilt.
 
 Passing `--force` bypasses this check entirely — the pipeline always runs regardless of file age.

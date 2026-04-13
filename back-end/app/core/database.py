@@ -13,7 +13,7 @@ _neo4j_driver: Driver | None = None
 def init_db() -> None:
     global _duckdb_conn, _neo4j_driver
     settings = get_settings()
-    _duckdb_conn = duckdb.connect(settings.DUCKDB_PATH, read_only=True)
+    _duckdb_conn = duckdb.connect(settings.DUCKDB_PATH)
     _neo4j_driver = GraphDatabase.driver(  # type: ignore[reportUnknownMemberType]
         settings.NEO4J_URI,
         auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD),

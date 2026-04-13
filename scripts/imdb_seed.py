@@ -1,4 +1,3 @@
-
 """
 IMDB seed script
 ----------------
@@ -16,7 +15,6 @@ from __future__ import annotations
 import argparse
 import gzip
 import shutil
-import sys
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -41,26 +39,26 @@ SOURCES_DIR = PARQUET_DIR / "sources"
 DUCKDB_PATH = PARQUET_DIR / "imdb.duckdb"
 
 # Parquet file paths
-PQ_TITLE_BASICS     = PARQUET_DIR / "title.basics.parquet"
+PQ_TITLE_BASICS = PARQUET_DIR / "title.basics.parquet"
 PQ_TITLE_PRINCIPALS = PARQUET_DIR / "title.principals.parquet"
-PQ_TITLE_RATINGS    = PARQUET_DIR / "title.ratings.parquet"
-PQ_NAME_UNIQUE      = PARQUET_DIR / "name.unique.parquet"
+PQ_TITLE_RATINGS = PARQUET_DIR / "title.ratings.parquet"
+PQ_NAME_UNIQUE = PARQUET_DIR / "name.unique.parquet"
 
 # Table name → parquet path (for DuckDB rebuild); name.basics last so the
 # filtered parquet can reference already-written title.basics & title.principals.
 DATASETS: list[tuple[str, Path]] = [
-    (title_basics_tsv_gz_url,     PQ_TITLE_BASICS),
+    (title_basics_tsv_gz_url, PQ_TITLE_BASICS),
     (title_principals_tsv_gz_url, PQ_TITLE_PRINCIPALS),
-    (title_ratings_tsv_gz_url,    PQ_TITLE_RATINGS),
-    (name_basics_tsv_gz_url,      PQ_NAME_UNIQUE),
+    (title_ratings_tsv_gz_url, PQ_TITLE_RATINGS),
+    (name_basics_tsv_gz_url, PQ_NAME_UNIQUE),
 ]
 
 # Table name → parquet path for DuckDB rebuild
 DUCKDB_TABLES: list[tuple[str, Path]] = [
-    ("title_basics",      PQ_TITLE_BASICS),
-    ("title_principals",  PQ_TITLE_PRINCIPALS),
-    ("title_ratings",     PQ_TITLE_RATINGS),
-    ("name_unique",       PQ_NAME_UNIQUE),
+    ("title_basics", PQ_TITLE_BASICS),
+    ("title_principals", PQ_TITLE_PRINCIPALS),
+    ("title_ratings", PQ_TITLE_RATINGS),
+    ("name_unique", PQ_NAME_UNIQUE),
 ]
 
 STALENESS_DAYS = 30
@@ -69,6 +67,7 @@ STALENESS_DAYS = 30
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _parquet_files() -> list[Path]:
     return [pq for _, pq in DATASETS]
@@ -113,7 +112,9 @@ def _decompress(gz_path: Path) -> Path:
     return tsv_path
 
 
-def _tsv_to_parquet(con: duckdb.DuckDBPyConnection, tsv_path: Path, parquet_path: Path) -> None:
+def _tsv_to_parquet(
+    con: duckdb.DuckDBPyConnection, tsv_path: Path, parquet_path: Path
+) -> None:
     tsv = tsv_path.as_posix()
     pq = parquet_path.as_posix()
     tb_pq = PQ_TITLE_BASICS.as_posix()
@@ -133,6 +134,14 @@ def _tsv_to_parquet(con: duckdb.DuckDBPyConnection, tsv_path: Path, parquet_path
                 )
             ) TO '{pq}' (FORMAT PARQUET)
         """
+    elif parquet_path == PQ_TITLE_BASICS:
+        sql = f"""
+            COPY (
+                SELECT *
+                FROM read_csv('{tsv}', delim='\\t', header=true, nullstr='\\N')
+                WHERE titleType NOT IN ('tvEpisode', 'videoGame')
+            ) TO '{pq}' (FORMAT PARQUET)
+        """
     else:
         sql = f"""
             COPY (
@@ -147,10 +156,12 @@ def _tsv_to_parquet(con: duckdb.DuckDBPyConnection, tsv_path: Path, parquet_path
 
 def _rebuild_duckdb() -> None:
     print(f"\nRebuilding {DUCKDB_PATH.name} ...", flush=True)
+    DUCKDB_PATH.unlink(missing_ok=True)
     with duckdb.connect(str(DUCKDB_PATH)) as con:
         for table, pq_path in DUCKDB_TABLES:
-            con.execute(f"DROP TABLE IF EXISTS {table}")
-            con.execute(f"CREATE TABLE {table} AS SELECT * FROM read_parquet('{pq_path.as_posix()}')")
+            con.execute(
+                f"CREATE TABLE {table} AS SELECT * FROM read_parquet('{pq_path.as_posix()}')"
+            )
             print(f"  Created table: {table}", flush=True)
 
 
@@ -166,43 +177,53 @@ def _cleanup_sources() -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed IMDB data into Parquet and DuckDB.")
-    parser.add_argument("--force", action="store_true", help="Skip the staleness check and always re-download")
+    parser = argparse.ArgumentParser(
+        description="Seed IMDB data into Parquet and DuckDB."
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Skip the staleness check and always re-download",
+    )
     args = parser.parse_args()
 
-    if not args.force and _all_fresh():
-        print("Parquet files are up to date (all younger than 30 days). Nothing to do.")
-        sys.exit(0)
+    needs_download = args.force or not _all_fresh()
 
-    stale = [p for p in _parquet_files() if not _is_fresh(p)]
-    for p in stale:
-        reason = "missing" if not p.exists() else "older than 30 days"
-        print(f"  {p.name}: {reason}")
+    if not needs_download:
+        print(
+            "Parquet files are up to date (all younger than 30 days). Skipping download."
+        )
+    else:
+        stale = [p for p in _parquet_files() if not _is_fresh(p)]
+        for p in stale:
+            reason = "missing" if not p.exists() else "older than 30 days"
+            print(f"  {p.name}: {reason}")
 
-    SOURCES_DIR.mkdir(parents=True, exist_ok=True)
-    PARQUET_DIR.mkdir(parents=True, exist_ok=True)
+        SOURCES_DIR.mkdir(parents=True, exist_ok=True)
+        PARQUET_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Phase 2: download sequentially
-    print("\nDownloading source files ...")
-    gz_files: list[Path] = []
-    for url, _ in DATASETS:
-        filename = url.rsplit("/", 1)[-1]
-        dest = SOURCES_DIR / filename
-        _download(url, dest)
-        gz_files.append(dest)
+        # Phase 2: download sequentially
+        print("\nDownloading source files ...")
+        gz_files: list[Path] = []
+        for url, _ in DATASETS:
+            filename = url.rsplit("/", 1)[-1]
+            dest = SOURCES_DIR / filename
+            _download(url, dest)
+            gz_files.append(dest)
 
-    # Phase 3: decompress
-    print("\nDecompressing ...")
-    tsv_files: list[Path] = []
-    for gz_path in gz_files:
-        tsv_files.append(_decompress(gz_path))
+        # Phase 3: decompress
+        print("\nDecompressing ...")
+        tsv_files: list[Path] = []
+        for gz_path in gz_files:
+            tsv_files.append(_decompress(gz_path))
 
-    # Phase 4: convert to parquet (in-memory DuckDB connection)
-    print("\nConverting to parquet ...")
-    with duckdb.connect() as con:
-        for (_, parquet_path), tsv_path in zip(DATASETS, tsv_files):
-            _tsv_to_parquet(con, tsv_path, parquet_path)
+        # Phase 4: convert to parquet (in-memory DuckDB connection)
+        print("\nConverting to parquet ...")
+        with duckdb.connect() as con:
+            for (_, parquet_path), tsv_path in zip(DATASETS, tsv_files):
+                _tsv_to_parquet(con, tsv_path, parquet_path)
 
     # Phase 5: rebuild imdb.duckdb
     _rebuild_duckdb()
@@ -215,4 +236,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
