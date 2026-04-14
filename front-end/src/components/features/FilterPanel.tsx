@@ -1,16 +1,18 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect } from "react";
 import { Filter, TrendingUp, Users } from "lucide-react";
 import { useFilterOptions, type FilterOptionsResponse } from "@/hooks/useFilterOptions";
+import { SearchAutocomplete } from "@/components/features/SearchAutocomplete";
+import type { SearchResultItem } from "@/hooks/useSearch";
 
 export type FilterState = {
   topRated: boolean;
   mostPopular: boolean;
   search: string;
+  selectedSearchResult: SearchResultItem | null;
   genre: string | null;
   titleType: string | null;
   ratingRange: [number, number] | null;
@@ -124,8 +126,6 @@ export function FilterPanel({
   }, [filterOptionsQuery.data, handleOptionsRefresh]);
 
   const options = filterOptionsQuery.data ?? EMPTY_OPTIONS;
-  const isInitialLoad = filterOptionsQuery.isLoading && !filterOptionsQuery.data;
-  const hasNoOptions = !filterOptionsQuery.data && !isInitialLoad;
 
   const formatCount = (value: number | null | undefined): string => {
     return typeof value === "number" ? value.toLocaleString() : "N/A";
@@ -153,16 +153,13 @@ export function FilterPanel({
       </div>
 
       {/* Search */}
-      <div className="space-y-3">
-        <Label htmlFor="filter-search" className="text-xs text-neutral-400">Search</Label>
-        <Input
-          id="filter-search"
-          placeholder="Search by title or person..."
-          className="bg-neutral-900 border-neutral-800"
-          value={filters.search}
-          onChange={(event) => handleFieldChange("search", event.target.value)}
-        />
-      </div>
+      <SearchAutocomplete
+        value={filters.search}
+        onChange={(v) => handleFieldChange("search", v)}
+        filters={filters}
+        selectedItem={filters.selectedSearchResult}
+        onSelect={(item) => setFilters((draft) => { draft.selectedSearchResult = item; })}
+      />
 
       {/* Quick Queries */}
       <div className="space-y-3">
@@ -282,22 +279,6 @@ export function FilterPanel({
           </Select>
         </div>
       </div>
-
-      {isInitialLoad && (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 px-3 py-2 text-xs text-neutral-400">
-          Loading filter options...
-        </div>
-      )}
-
-      {filterOptionsQuery.error && (
-        <div className="rounded-lg border border-red-900/80 bg-red-950/30 px-3 py-2 text-xs text-red-200">
-          Failed to refresh filter options. {hasNoOptions ? "No options are available for this toggle combination yet." : "Showing the last available options."}
-        </div>
-      )}
-
-      {filterOptionsQuery.isFetching && !isInitialLoad && (
-        <div className="text-[11px] text-neutral-500">Refreshing options for the selected toggles...</div>
-      )}
 
       <Button size="lg" className="w-full">
         Show graph

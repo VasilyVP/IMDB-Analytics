@@ -1,4 +1,4 @@
-# IMDB Explorer
+# IMDB Analytics
 
 Full-stack app for graph analytics and instant querying over the IMDB dataset — Neo4j for graph traversals, DuckDB for relational queries, served via FastAPI to a React front-end.
 

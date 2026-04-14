@@ -6,7 +6,8 @@ from fastapi import APIRouter, Query
 
 from app.api.dependencies import DuckDBDep
 from app.schemas.filter_params import FilterParamsResponse
-from app.services import query_options_service
+from app.schemas.search import SearchQueryParams, SearchResponse
+from app.services import query_options_service, search_service
 
 router = APIRouter()
 
@@ -22,3 +23,11 @@ def get_filter_options(
         top_rated=top_rated,
         most_popular=most_popular,
     )
+
+
+@router.get("/search", response_model=SearchResponse, response_model_exclude_none=True)
+def search(
+    duckdb: DuckDBDep,
+    params: Annotated[SearchQueryParams, Query()],
+) -> SearchResponse:
+    return search_service.search(duckdb, params)

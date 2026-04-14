@@ -10,6 +10,7 @@ const INITIAL_FILTER_STATE: FilterState = {
   topRated: false,
   mostPopular: false,
   search: "",
+  selectedSearchResult: null,
   genre: null,
   titleType: null,
   ratingRange: null,
