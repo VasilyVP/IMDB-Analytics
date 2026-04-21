@@ -22,7 +22,7 @@ COLLECTION_NAME = "titles"
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
 TEXT_GENERATION_PROVIDER = "OpenAI-compatible API"
 
-TEXT_GENERATION_MODEL = os.getenv("TEXT_GENERATION_MODEL", "llama3.2:1b")
+TEXT_GENERATION_MODEL = os.getenv("TEXT_GENERATION_MODEL", "llama3.2:3b")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1/chat/completions")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "any-api-key")
 HUMAN_MAX_TOKENS = 200

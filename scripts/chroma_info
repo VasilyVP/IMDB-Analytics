@@ -1,3 +1,22 @@
+"""ChromaDB collection inspection helper.
+
+Use this script to quickly inspect a ChromaDB collection from the terminal.
+
+Prerequisites:
+- ChromaDB server is running and reachable.
+- Collection exists in tenant "default_tenant" and database "default_database".
+
+Examples:
+- Print total records:
+    uv run python scripts/chroma_info --count
+
+- Print last 10 records (default):
+    uv run python scripts/chroma_info --tail
+
+- Print last 25 records from a custom collection/host/port:
+    uv run python scripts/chroma_info --tail -n 25 --collection titles --host localhost --port 8001
+"""
+
 from __future__ import annotations
 
 import argparse
