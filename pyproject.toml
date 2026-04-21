@@ -10,9 +10,11 @@ dependencies = [
     "fastapi[standard]>=0.135.3",
     "granian>=2.7.3",
     "neo4j>=5.0",
+    "numpy>=2.3.4",
+    "openai>=2.32.0",
     "pydantic-settings>=2.13.1",
     "python-dotenv",
+    "rich>=14.3.3",
     "slowapi>=0.1.9",
     "tqdm",
-    "vllm>=0.6.0",
 ]

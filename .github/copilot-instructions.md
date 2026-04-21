@@ -70,8 +70,15 @@ uv run --directory back-end fastapi dev app/main.py  # back-end only
 cd front-end && bun run dev    # Vite dev server on port 3000
 cd front-end && bun run build
 
-# Tests (back-end)
+# Back-end checks (app + scripts)
+uv run pyright
+uv run pyright scripts
 uv run python -m unittest discover back-end/tests
+uv run python -m unittest discover scripts/tests
+
+# Front-end checks
+cd front-end && bun run tsc -b --noEmit
+cd front-end && bun run build
 ```
 
 ## Environment

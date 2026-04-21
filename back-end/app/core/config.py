@@ -11,7 +11,11 @@ _ENV_FILE = str(_REPO_ROOT / ".env")
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     NEO4J_URI: str
     NEO4J_USER: str

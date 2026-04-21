@@ -6,9 +6,14 @@ setup:
 	@$(MAKE) seed
 	@echo "Done."
 
-# Start all services in detached mode, create Neo4j instance.
+# Start default infrastructure services (Neo4j, ChromaDB) in detached mode and wait for health checks.
+# To install with vLLM, use `make install:llm` instead to include it in the startup process.
 install:
 	@docker compose up -d --wait
+
+# Start infrastructure including optional vLLM service.
+install\:llm:
+	@docker compose --profile llm up -d --wait
 
 # Run the setup script to populate the database with initial data
 seed:
@@ -29,9 +34,19 @@ test:
 	@echo "Running scripts unit tests..."
 	@uv run python -m unittest discover -s scripts/tests -p "test_*.py"
 
-# Resume previously stopped containers (no config reload)
+# Run only scripts integration tests
+test\:integrational:
+	@echo "Running scripts integration tests..."
+	@uv run python -m unittest discover -s scripts/tests/integrational -p "test_*.py"
+
+# Resume previously stopped default containers (Neo4j, ChromaDB) and wait for health checks.
+# To include vLLM in the resumed services, use `make start:llm` instead.
 start:
 	@docker compose start --wait
+
+# Resume containers including optional vLLM service.
+start\:llm:
+	@docker compose --profile llm up -d --wait
 
 # Pause containers without removing them (data and state preserved)
 stop:

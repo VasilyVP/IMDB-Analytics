@@ -24,8 +24,11 @@ IMDB TSV.GZ → Parquet (back-end/data/) → DuckDB (imdb.duckdb) → Neo4j grap
 
 ```bash
 # 1. Copy .env and set NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
-# 2. Start Neo4j
+# 2. Start infrastructure services (Neo4j, ChromaDB)
 make install
+
+# Optional: include vLLM when needed
+# make install:llm
 
 # 3. Seed data
 make seed-sample   # ~1,000 titles (dev/testing)

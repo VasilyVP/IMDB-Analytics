@@ -10,6 +10,8 @@ from .models import ChromaSeedRecord
 class ChromaWriter:
     collection_name: str
     max_retries: int
+    host: str
+    port: int
     _client: Any = field(init=False, repr=False)
     _collection: Any | None = field(init=False, default=None, repr=False)
 
@@ -21,7 +23,7 @@ class ChromaWriter:
                 "The chromadb package is required for Chroma seed writes."
             ) from exc
 
-        self._client = chromadb.Client()
+        self._client = chromadb.HttpClient(host=self.host, port=self.port)
         self._collection = None
 
     def ensure_collection(self, reset: bool) -> None:

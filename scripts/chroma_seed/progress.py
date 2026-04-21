@@ -13,6 +13,9 @@ class ProgressSnapshot:
     success: int
     failed: int
     elapsed_seconds: float
+    generation_seconds: float
+    chromadb_save_seconds: float
+    duckdb_query_seconds: float
 
 
 def create_overall_progress(total: int) -> tqdm[Any]:
@@ -25,8 +28,18 @@ def create_batch_progress() -> tqdm[Any]:
 
 def render_runtime_stats(snapshot: ProgressSnapshot) -> str:
     avg = snapshot.elapsed_seconds / snapshot.processed if snapshot.processed else 0.0
+    if snapshot.processed and snapshot.total > snapshot.processed:
+        eta = avg * (snapshot.total - snapshot.processed)
+    else:
+        eta = 0.0
     return (
-        f"processed={snapshot.processed}/{snapshot.total} "
-        f"success={snapshot.success} failed={snapshot.failed} "
-        f"avg_sec_per_title={avg:.2f} elapsed_sec={snapshot.elapsed_seconds:.2f}"
+        f"\nprocessed={snapshot.processed}/{snapshot.total}"
+        f"\nsuccess={snapshot.success}"
+        f"\nfailed={snapshot.failed}"
+        f"\navg_sec_per_title={avg:.2f}"
+        f"\nelapsed_sec={snapshot.elapsed_seconds:.2f}"
+        f"\neta_sec={eta:.2f}"
+        f"\ngeneration_sec={snapshot.generation_seconds:.2f}"
+        f"\nchromadb_save_sec={snapshot.chromadb_save_seconds:.2f}"
+        f"\nduckdb_query_sec={snapshot.duckdb_query_seconds:.2f}"
     )

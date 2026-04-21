@@ -12,7 +12,7 @@ FROM title_basics tb
 INNER JOIN title_ratings tr ON tr.tconst = tb.tconst
 WHERE tb.titleType = 'movie'
   AND tr.averageRating > 7.5
-  AND tb.startYear > 1990
+  AND tb.startYear > 2013
   AND tb.startYear < 2024
   {after_filter}
 ORDER BY tb.tconst
@@ -25,7 +25,7 @@ FROM title_basics tb
 INNER JOIN title_ratings tr ON tr.tconst = tb.tconst
 WHERE tb.titleType = 'movie'
   AND tr.averageRating > 7.5
-  AND tb.startYear > 1990
+  AND tb.startYear > 2013
   AND tb.startYear < 2024
   {after_filter}
 """
