@@ -18,3 +18,8 @@ dependencies = [
     "slowapi>=0.1.9",
     "tqdm",
 ]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.408",
+]

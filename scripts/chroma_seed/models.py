@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
+
+SeedMode = Literal["titles", "persons"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -11,10 +14,28 @@ class TitleRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class PersonRecord:
+    person_id: str
+    name: str
+    birth_year: int | None
+    category: str
+
+
+@dataclass(frozen=True, slots=True)
 class ChromaSeedRecord:
     title_id: str
     title: str
     start_year: int
+    human_description: str
+    embedding_description: str
+
+
+@dataclass(frozen=True, slots=True)
+class ChromaPersonSeedRecord:
+    person_id: str
+    name: str
+    birth_year: int | None
+    category: str
     human_description: str
     embedding_description: str
 

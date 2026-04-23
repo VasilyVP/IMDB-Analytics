@@ -94,7 +94,7 @@ NEO4J_PASSWORD=password
 
 ```bash
 make test
-make test:integrational
+make test:integration
 uv run pyright
 uv run pyright scripts
 cd front-end && bun run tsc -b --noEmit

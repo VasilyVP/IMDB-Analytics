@@ -7,6 +7,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from .models import SeedMode
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 
@@ -18,7 +20,8 @@ SQLITE_PATH = REPO_ROOT / "data" / "chroma_seed.sqlite"
 CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
 CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8001"))
 
-COLLECTION_NAME = "titles"
+COLLECTION_NAME_TITLES = "titles"
+COLLECTION_NAME_PERSONS = "persons"
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
 TEXT_GENERATION_PROVIDER = "OpenAI-compatible API"
 
@@ -30,7 +33,7 @@ EMBEDDING_MAX_TOKENS = 250
 INFERENCE_CONCURRENCY = int(os.getenv("INFERENCE_CONCURRENCY", str(BATCH_SIZE)))
 
 MAX_RETRIES = 3
-MAX_CONSECUTIVE_TITLE_FAILURES = 10
+MAX_CONSECUTIVE_FAILURES = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,9 +42,11 @@ class RuntimeConfig:
     sqlite_path: Path
     chroma_host: str
     chroma_port: int
-    collection_name: str
+    collection_name_titles: str
+    collection_name_persons: str
     batch_size: int
     limit: int | None
+    selected_modes: tuple[SeedMode, ...]
     text_generation_provider: str
     model: str
     openai_base_url: str
@@ -50,7 +55,7 @@ class RuntimeConfig:
     embedding_max_tokens: int
     inference_concurrency: int
     max_retries: int
-    max_consecutive_title_failures: int
+    max_consecutive_failures: int
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -69,19 +74,46 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional limit for development/testing.",
     )
+    parser.add_argument(
+        "--titles",
+        action="store_true",
+        help="Run titles seeding mode.",
+    )
+    parser.add_argument(
+        "--persons",
+        action="store_true",
+        help="Run persons seeding mode.",
+    )
     return parser
 
 
-def load_runtime_config(batch_size: int, limit: int | None) -> RuntimeConfig:
+def _resolve_selected_modes(run_titles: bool, run_persons: bool) -> tuple[SeedMode, ...]:
+    if run_titles and run_persons:
+        return ("titles", "persons")
+    if run_titles:
+        return ("titles",)
+    if run_persons:
+        return ("persons",)
+    return ("titles", "persons")
+
+
+def load_runtime_config(
+    batch_size: int,
+    limit: int | None,
+    run_titles: bool = False,
+    run_persons: bool = False,
+) -> RuntimeConfig:
     inferred_concurrency = max(1, min(INFERENCE_CONCURRENCY, batch_size))
     return RuntimeConfig(
         duckdb_path=DUCKDB_PATH,
         sqlite_path=SQLITE_PATH,
         chroma_host=CHROMA_HOST,
         chroma_port=CHROMA_PORT,
-        collection_name=COLLECTION_NAME,
+        collection_name_titles=COLLECTION_NAME_TITLES,
+        collection_name_persons=COLLECTION_NAME_PERSONS,
         batch_size=batch_size,
         limit=limit,
+        selected_modes=_resolve_selected_modes(run_titles, run_persons),
         text_generation_provider=TEXT_GENERATION_PROVIDER,
         model=TEXT_GENERATION_MODEL,
         openai_base_url=OPENAI_BASE_URL,
@@ -90,5 +122,5 @@ def load_runtime_config(batch_size: int, limit: int | None) -> RuntimeConfig:
         embedding_max_tokens=EMBEDDING_MAX_TOKENS,
         inference_concurrency=inferred_concurrency,
         max_retries=MAX_RETRIES,
-        max_consecutive_title_failures=MAX_CONSECUTIVE_TITLE_FAILURES,
+        max_consecutive_failures=MAX_CONSECUTIVE_FAILURES,
     )

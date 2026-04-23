@@ -19,11 +19,11 @@ class ProgressSnapshot:
 
 
 def create_overall_progress(total: int) -> tqdm[Any]:
-    return tqdm(total=total, desc="Total", unit="title")
+    return tqdm(total=total, desc="Total", unit="record")
 
 
 def create_batch_progress() -> tqdm[Any]:
-    return tqdm(total=0, desc="Batch", unit="title", leave=False)
+    return tqdm(total=0, desc="Batch", unit="record", leave=False)
 
 
 def render_runtime_stats(snapshot: ProgressSnapshot) -> str:
@@ -36,7 +36,7 @@ def render_runtime_stats(snapshot: ProgressSnapshot) -> str:
         f"\nprocessed={snapshot.processed}/{snapshot.total}"
         f"\nsuccess={snapshot.success}"
         f"\nfailed={snapshot.failed}"
-        f"\navg_sec_per_title={avg:.2f}"
+        f"\navg_sec_per_record={avg:.2f}"
         f"\nelapsed_sec={snapshot.elapsed_seconds:.2f}"
         f"\neta_sec={eta:.2f}"
         f"\ngeneration_sec={snapshot.generation_seconds:.2f}"

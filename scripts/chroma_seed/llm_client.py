@@ -3,62 +3,31 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Callable, TypeVar, cast
 from urllib import request as urllib_request
 
-from .models import TitleRecord
+from .models import PersonRecord, TitleRecord
+from .prompts import (
+    build_person_description_prompt,
+    build_person_embedding_prompt,
+    build_title_description_prompt,
+    build_title_embedding_prompt,
+)
+
+
+_RecordT = TypeVar("_RecordT", TitleRecord, PersonRecord)
 
 
 def _empty_failure_messages() -> dict[str, str]:
     return {}
 
-_HUMAN_PROMPT_TEMPLATE = """
-You are generating a short film description for a catalog.
 
-Write a clear, neutral summary of the film.
-
-Requirements:
-- 3-4 sentences
-- 70-100 words
-- No opinions, ratings, or promotional language
-- No actor names
-- Focus on premise, main characters, and central conflict
-- Mention setting only if relevant
-- Use natural, readable language
-
-Output plain text only.
-"""
-
-_EMBEDDING_PROMPT_TEMPLATE = """
-You are generating a structured semantic description of a film for embedding and similarity search.
-
-Rules:
-- Be concise, factual, and information-dense.
-- Do NOT include opinions, ratings, or subjective language.
-- Do NOT use marketing phrases.
-- Use consistent vocabulary.
-- Output in plain text (no JSON, no markdown).
-- Max 120 words.
-- Use simple vocabulary. Avoid rare words and synonyms.
-- Prefer canonical genre and theme labels.
-
-Fill in all fields in this structure:
-Genres:
-Setting:
-Themes:
-Plot:
-Characters:
-Style:
-Director:
-Writer:
-Starring:
-"""
 
 
 @dataclass(slots=True)
 class GenerationResult:
     descriptions: dict[str, str]
-    failed_title_ids: list[str]
+    failed_ids: list[str]
     failure_messages: dict[str, str] = field(default_factory=_empty_failure_messages)
 
 
@@ -71,7 +40,7 @@ class TextGenerationClient:
     human_max_tokens: int
     embedding_max_tokens: int
     inference_concurrency: int
-    _client: Any = field(init=False, repr=False)
+    _client: object = field(init=False, repr=False)
     _use_chat_completions_endpoint: bool = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -91,71 +60,102 @@ class TextGenerationClient:
         self._client = OpenAI(base_url=self.base_url, api_key=self.api_key)
 
     def generate_human_descriptions(self, titles: list[TitleRecord]) -> GenerationResult:
+        # Backward-compatible alias for titles mode.
+        return self.generate_title_human_descriptions(titles)
+
+    def generate_embedding_descriptions(self, titles: list[TitleRecord]) -> GenerationResult:
+        # Backward-compatible alias for titles mode.
+        return self.generate_title_embedding_descriptions(titles)
+
+    def generate_title_human_descriptions(self, titles: list[TitleRecord]) -> GenerationResult:
         return self._generate_descriptions(
-            titles=titles,
-            system_prompt=_HUMAN_PROMPT_TEMPLATE,
+            records=titles,
+            build_prompt=build_title_description_prompt,
+            get_record_id=lambda record: record.title_id,
             max_tokens=self.human_max_tokens,
         )
 
-    def generate_embedding_descriptions(
+    def generate_title_embedding_descriptions(self, titles: list[TitleRecord]) -> GenerationResult:
+        return self._generate_descriptions(
+            records=titles,
+            build_prompt=build_title_embedding_prompt,
+            get_record_id=lambda record: record.title_id,
+            max_tokens=self.embedding_max_tokens,
+        )
+
+    def generate_person_human_descriptions(self, persons: list[PersonRecord]) -> GenerationResult:
+        return self._generate_descriptions(
+            records=persons,
+            build_prompt=build_person_description_prompt,
+            get_record_id=lambda record: record.person_id,
+            max_tokens=self.human_max_tokens,
+        )
+
+    def generate_person_embedding_descriptions(
         self,
-        titles: list[TitleRecord],
+        persons: list[PersonRecord],
     ) -> GenerationResult:
         return self._generate_descriptions(
-            titles=titles,
-            system_prompt=_EMBEDDING_PROMPT_TEMPLATE,
+            records=persons,
+            build_prompt=build_person_embedding_prompt,
+            get_record_id=lambda record: record.person_id,
             max_tokens=self.embedding_max_tokens,
         )
 
     def _generate_descriptions(
         self,
-        titles: list[TitleRecord],
-        system_prompt: str,
+        records: list[_RecordT],
+        build_prompt: Callable[[_RecordT], tuple[str, str]],
+        get_record_id: Callable[[_RecordT], str],
         max_tokens: int,
     ) -> GenerationResult:
-        if not titles:
-            return GenerationResult(descriptions={}, failed_title_ids=[])
+        if not records:
+            return GenerationResult(descriptions={}, failed_ids=[])
 
         async def _run() -> GenerationResult:
             semaphore = asyncio.Semaphore(max(1, self.inference_concurrency))
             tasks = [
                 asyncio.create_task(
-                    self._generate_for_title(
+                    self._generate_for_record(
                         semaphore=semaphore,
-                        title=title,
-                        system_prompt=system_prompt,
+                        record=record,
+                        build_prompt=build_prompt,
+                        get_record_id=get_record_id,
                         max_tokens=max_tokens,
                     )
                 )
-                for title in titles
+                for record in records
             ]
             results = await asyncio.gather(*tasks)
 
             descriptions: dict[str, str] = {}
-            failed_title_ids: list[str] = []
+            failed_ids: list[str] = []
             failure_messages: dict[str, str] = {}
             for title_id, text, error in results:
                 if text is not None:
                     descriptions[title_id] = text
                 else:
-                    failed_title_ids.append(title_id)
+                    failed_ids.append(title_id)
                     failure_messages[title_id] = error
 
             return GenerationResult(
                 descriptions=descriptions,
-                failed_title_ids=failed_title_ids,
+                failed_ids=failed_ids,
                 failure_messages=failure_messages,
             )
 
         return asyncio.run(_run())
 
-    async def _generate_for_title(
+    async def _generate_for_record(
         self,
         semaphore: asyncio.Semaphore,
-        title: TitleRecord,
-        system_prompt: str,
+        record: _RecordT,
+        build_prompt: Callable[[_RecordT], tuple[str, str]],
+        get_record_id: Callable[[_RecordT], str],
         max_tokens: int,
     ) -> tuple[str, str | None, str]:
+        record_id = get_record_id(record)
+        system_prompt, user_prompt = build_prompt(record)
         last_error = "unknown error"
         for _ in range(self.max_retries):
             try:
@@ -163,53 +163,50 @@ class TextGenerationClient:
                     result_text = await asyncio.to_thread(
                         self._request_completion,
                         system_prompt,
-                        title,
+                        user_prompt,
                         max_tokens,
                     )
                 if result_text.strip() == "":
                     raise ValueError("Empty completion response.")
-                return title.title_id, result_text.strip(), ""
+                return record_id, result_text.strip(), ""
             except Exception as exc:  # noqa: BLE001
                 last_error = str(exc)
 
-        return title.title_id, None, last_error
+        return record_id, None, last_error
 
     def _request_completion(
         self,
         system_prompt: str,
-        title: TitleRecord,
+        user_prompt: str,
         max_tokens: int,
     ) -> str:
         if self._use_chat_completions_endpoint:
             return self._request_chat_completions_endpoint(
                 system_prompt=system_prompt,
-                title=title,
+                user_prompt=user_prompt,
                 max_tokens=max_tokens,
             )
 
-        response = self._client.chat.completions.create(
+        response = self._client.chat.completions.create(  # type: ignore[union-attr]
             model=self.model,
             messages=[
                 {"role": "system", "content": system_prompt.strip()},
-                {
-                    "role": "user",
-                    "content": _build_user_prompt(title),
-                },
+                {"role": "user", "content": user_prompt},
             ],
             max_tokens=max_tokens,
             temperature=0,
         )
-        return _extract_response_text(response)
+        return _extract_response_text(cast(object, response))
 
     def _request_chat_completions_endpoint(
         self,
         system_prompt: str,
-        title: TitleRecord,
+        user_prompt: str,
         max_tokens: int,
     ) -> str:
         messages = [
             {"role": "system", "content": system_prompt.strip()},
-            {"role": "user", "content": _build_user_prompt(title)},
+            {"role": "user", "content": user_prompt},
         ]
         payload = {
             "model": self.model,
@@ -232,16 +229,6 @@ class TextGenerationClient:
 
         parsed = json.loads(raw_body)
         return _extract_response_text(parsed)
-
-
-def _build_user_prompt(title: TitleRecord) -> str:
-    return "\n".join(
-        [
-            "Film:",
-            f" - Title: {title.title}",
-            f" - Year: {title.start_year}",
-        ]
-    )
 
 
 def _extract_response_text(response: object) -> str:

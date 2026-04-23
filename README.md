@@ -1,4 +1,4 @@
-# IMDB Analytics
+# IMDB Insights
 
 Full-stack app for graph analytics and instant querying over the IMDB dataset — Neo4j for graph traversals, DuckDB for relational queries, and Chroma DB for similarity search and storing film descriptions, served via FastAPI to a React front-end.
 

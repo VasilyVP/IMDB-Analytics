@@ -35,9 +35,9 @@ test:
 	@uv run python -m unittest discover -s scripts/tests -p "test_*.py"
 
 # Run only scripts integration tests
-test\:integrational:
+test\:integration:
 	@echo "Running scripts integration tests..."
-	@uv run python -m unittest discover -s scripts/tests/integrational -p "test_*.py"
+	@uv run python -m unittest discover -s scripts/tests/integration -p "test_*.py"
 
 # Resume previously stopped default containers (Neo4j, ChromaDB) and wait for health checks.
 # To include vLLM in the resumed services, use `make start:llm` instead.
