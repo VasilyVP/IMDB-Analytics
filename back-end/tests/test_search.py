@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Any, cast
 import unittest
 from unittest.mock import ANY, patch
 
+import duckdb
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -49,9 +51,9 @@ class SearchServiceTests(unittest.TestCase):
             SearchQueryParams(q="nolan", limit=500)
 
     @patch("app.services.search_service.search_repository.search", return_value=[])
-    def test_search_uses_limit_from_params(self, mocked_search: object) -> None:
+    def test_search_uses_limit_from_params(self, mocked_search: Any) -> None:
         params = SearchQueryParams(q="nolan", limit=50)
-        search_service.search(object(), params)
+        search_service.search(cast(duckdb.DuckDBPyConnection, object()), params)
 
         mocked_search.assert_called_once()
         self.assertEqual(mocked_search.call_args.kwargs["limit"], 50)
@@ -76,8 +78,11 @@ class SearchServiceTests(unittest.TestCase):
             ),
         ],
     )
-    def test_search_merges_results_with_expected_shape(self, _mocked_search: object) -> None:
-        payload = search_service.search(object(), SearchQueryParams(q="shaw", limit=10))
+    def test_search_merges_results_with_expected_shape(self, _mocked_search: Any) -> None:
+        payload = search_service.search(
+            cast(duckdb.DuckDBPyConnection, object()),
+            SearchQueryParams(q="shaw", limit=10),
+        )
 
         self.assertEqual(
             payload,
@@ -99,10 +104,10 @@ class SearchServiceTests(unittest.TestCase):
     @patch("app.services.search_service.search_repository.search", return_value=[])
     def test_search_normalizes_filter_tokens_before_repository_calls(
         self,
-        mocked_search: object,
+        mocked_search: Any,
     ) -> None:
         search_service.search(
-            object(),
+            cast(duckdb.DuckDBPyConnection, object()),
             SearchQueryParams(
                 q="dark",
                 genre=" Drama ",
@@ -123,7 +128,7 @@ class SearchRepositoryTests(unittest.TestCase):
         conn = _RecordingDuckDBConnection()
 
         search_repository.search(
-            conn,
+            cast(duckdb.DuckDBPyConnection, conn),
             query="shaw",
             limit=10,
             source_relation="top_rated_titles",
@@ -141,7 +146,7 @@ class SearchRepositoryTests(unittest.TestCase):
         conn = _RecordingDuckDBConnection()
 
         search_repository.search(
-            conn,
+            cast(duckdb.DuckDBPyConnection, conn),
             query="nolan",
             limit=10,
             source_relation="top_rated_popular_titles",
@@ -159,7 +164,7 @@ class SearchRepositoryTests(unittest.TestCase):
         conn = _RecordingDuckDBConnection()
 
         search_repository.search(
-            conn,
+            cast(duckdb.DuckDBPyConnection, conn),
             query="%leo%%caprio%",
             limit=10,
             source_relation=None,
@@ -177,7 +182,7 @@ class SearchRepositoryTests(unittest.TestCase):
         conn = _RecordingDuckDBConnection()
 
         search_repository.search(
-            conn,
+            cast(duckdb.DuckDBPyConnection, conn),
             query="nolan",
             limit=10,
             source_relation=None,
@@ -195,7 +200,7 @@ class SearchRepositoryTests(unittest.TestCase):
         conn = _RecordingDuckDBConnection()
 
         search_repository.search(
-            conn,
+            cast(duckdb.DuckDBPyConnection, conn),
             query="leo caprio",
             limit=10,
             source_relation=None,
@@ -213,7 +218,7 @@ class SearchRepositoryTests(unittest.TestCase):
         conn = _RecordingDuckDBConnection()
 
         search_repository.search(
-            conn,
+            cast(duckdb.DuckDBPyConnection, conn),
             query="leo",
             limit=10,
             source_relation=None,
@@ -232,7 +237,7 @@ class SearchRepositoryTests(unittest.TestCase):
         conn = _RecordingDuckDBConnection()
 
         search_repository.search(
-            conn,
+            cast(duckdb.DuckDBPyConnection, conn),
             query="leo",
             limit=10,
             source_relation=None,
@@ -250,7 +255,7 @@ class SearchRepositoryTests(unittest.TestCase):
         conn = _RecordingDuckDBConnection()
 
         search_repository.search(
-            conn,
+            cast(duckdb.DuckDBPyConnection, conn),
             query="leo",
             limit=10,
             source_relation=None,

@@ -1,9 +1,6 @@
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { Separator } from "@/components/ui/separator";
-import { Search } from "lucide-react";
-import { GraphVisualization } from "@/components/features/GraphVisualization";
+import { GraphVisualization, type GraphNavigationTarget } from "@/components/features/GraphVisualization";
 import { FilterPanel, type FilterState } from "@/components/features/FilterPanel";
-import { QueryPanel } from "@/components/features/QueryPanel";
 import { useImmer } from "use-immer";
 import { useState } from "react";
 import { useGraphData, type GraphFilters } from "@/hooks/useGraphData";
@@ -43,6 +40,26 @@ export default function Analytics() {
     setGraphRequestToken((prev) => prev + 1);
   };
 
+  const handleNavigateToNode = (target: GraphNavigationTarget) => {
+    const selectedSearchResult =
+      target.type === "Title"
+        ? { id: target.id, primaryTitle: target.label }
+        : { id: target.id, name: target.label };
+
+    setFilters((draft) => {
+      draft.search = target.label;
+      draft.selectedSearchResult = selectedSearchResult;
+    });
+
+    const updatedFilters: FilterState = {
+      ...filters,
+      search: target.label,
+      selectedSearchResult,
+    };
+    setSubmittedGraphFilters(toGraphFilters(updatedFilters));
+    setGraphRequestToken((prev) => prev + 1);
+  };
+
   return (
     <ResizablePanelGroup orientation="horizontal" className="size-full overflow-hidden">
         {/* Left Panel - Graph Visualization */}
@@ -56,6 +73,7 @@ export default function Analytics() {
               void graphDataQuery.refetch();
             }}
             hasRequested={graphRequestToken > 0}
+            onNavigateToNode={handleNavigateToNode}
           />
         </ResizablePanel>
 
@@ -73,17 +91,6 @@ export default function Analytics() {
                 isGraphLoading={graphDataQuery.isLoading || graphDataQuery.isFetching}
                 hasGraphRequested={graphRequestToken > 0}
               />
-            </div>
-
-            <Separator className="bg-neutral-800" />
-
-            {/* Query Section */}
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Search className="w-4 h-4 text-neutral-400" />
-                <h2 className="text-sm tracking-tight text-neutral-300 m-0 font-normal">Instant Queries</h2>
-              </div>
-              <QueryPanel />
             </div>
           </div>
         </ResizablePanel>

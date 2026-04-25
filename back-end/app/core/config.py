@@ -21,6 +21,16 @@ class Settings(BaseSettings):
     NEO4J_USER: str
     NEO4J_PASSWORD: str
     DUCKDB_PATH: str = "data/imdb.duckdb"
+    CHROMA_HOST: str
+    CHROMA_PORT: int
+    CHROMA_COLLECTION_TITLES: str
+    CHROMA_COLLECTION_PERSONS: str
+    TEXT_GENERATION_MODEL: str
+    OPENAI_BASE_URL: str
+    OPENAI_API_KEY: str | None
+    LLM_MAX_RETRIES: int
+    HUMAN_MAX_TOKENS: int
+    EMBEDDING_MAX_TOKENS: int
 
     @field_validator("NEO4J_URI", "NEO4J_USER", "NEO4J_PASSWORD", "DUCKDB_PATH")
     @classmethod

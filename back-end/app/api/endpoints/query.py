@@ -9,10 +9,12 @@ from app.api.dependencies import DuckDBDep
 from app.core.limiter import limiter
 from app.schemas.filter_params import FilterParamsResponse
 from app.schemas.graph_data import GraphDataParams, GraphDataResponse
+from app.schemas.item_details import ItemDetailsParams, ItemDetailsResponse
 from app.schemas.items_found import ItemsFoundParams, ItemsFoundResponse
 from app.schemas.search import SearchQueryParams, SearchResponse
 from app.services import (
     graph_data_service,
+    item_details_service,
     items_found_service,
     query_options_service,
     search_service,
@@ -54,6 +56,24 @@ def get_items_found(
     params: Annotated[ItemsFoundParams, Query()],
 ) -> ItemsFoundResponse:
     return items_found_service.get_items_found(duckdb, params)
+
+
+@router.get("/item-details", response_model=ItemDetailsResponse)
+@limiter.limit("3/second")  # type: ignore[misc]
+def get_item_details(
+    request: Request,
+    duckdb: DuckDBDep,
+    params: Annotated[ItemDetailsParams, Query()],
+) -> ItemDetailsResponse:
+    try:
+        return item_details_service.get_item_details(duckdb, params)
+    except item_details_service.ItemDetailsNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Description not found") from exc
+    except item_details_service.ItemDetailsUnavailableError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Description service is temporarily unavailable",
+        ) from exc
 
 
 @router.get("/graph-data", response_model=GraphDataResponse)

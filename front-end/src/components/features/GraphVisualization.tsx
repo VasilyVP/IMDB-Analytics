@@ -5,10 +5,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize2, AlertTriangle } from "lucide-react";
 import type { GraphDataResponse, GraphEdge, GraphNode } from "@/hooks/useGraphData";
+import { useItemDetails } from "@/hooks/useItemDetails";
 
 type LayoutMode = "force" | "hierarchical" | "circular" | "radial";
 type RelationshipFilter = "all" | "actors" | "directors" | "genres";
-type GraphSelectionCallbacks = Pick<MouseEventCallbacks, "onNodeClick" | "onCanvasClick">;
+type GraphSelectionCallbacks = Pick<MouseEventCallbacks, "onNodeClick" | "onNodeDoubleClick" | "onCanvasClick">;
+
+export type GraphNavigationTarget = {
+  id: string;
+  label: string;
+  type: "Title" | "Person";
+};
 
 type GraphVisualizationProps = {
   data: GraphDataResponse | undefined;
@@ -17,6 +24,7 @@ type GraphVisualizationProps = {
   error: Error | null;
   onRetry: () => void;
   hasRequested: boolean;
+  onNavigateToNode: (target: GraphNavigationTarget) => void;
 };
 
 const LAYOUT_TO_NVL: Record<LayoutMode, Layout> = {
@@ -72,6 +80,26 @@ function getNodeTypeLabel(node: GraphNode): string {
   return node.type === "Title" ? "Title" : "Person";
 }
 
+function formatItemDetailsErrorMessage(error: Error | null): string {
+  if (!error) {
+    return "Unable to load description. Please try again.";
+  }
+
+  if (error.message.includes("(404)")) {
+    return "Description not found.";
+  }
+
+  if (error.message.includes("(503)")) {
+    return "Description service is temporarily unavailable.";
+  }
+
+  if (error.message.includes("(422)")) {
+    return "Description is currently unavailable. Please try again.";
+  }
+
+  return "Unable to load description. Please try again.";
+}
+
 export function GraphVisualization({
   data,
   isLoading,
@@ -79,6 +107,7 @@ export function GraphVisualization({
   error,
   onRetry,
   hasRequested,
+  onNavigateToNode,
 }: GraphVisualizationProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("force");
   const [relationshipFilter, setRelationshipFilter] = useState<RelationshipFilter>("all");
@@ -115,6 +144,16 @@ export function GraphVisualization({
     [filteredGraph.nodes, selectedNodeId],
   );
 
+  const selectedNodeItemDetailsParams = useMemo(
+    () => ({
+      titleId: selectedNode?.type === "Title" ? selectedNode.id : null,
+      nameId: selectedNode?.type === "Person" ? selectedNode.id : null,
+    }),
+    [selectedNode],
+  );
+
+  const itemDetailsQuery = useItemDetails(selectedNodeItemDetailsParams);
+
   const nvlNodes = useMemo<NvlNode[]>(() => {
     return filteredGraph.nodes.map((node) => ({
       id: node.id,
@@ -145,11 +184,18 @@ export function GraphVisualization({
         onNodeClick: (node) => {
           setSelectedNodeId(node.id);
         },
+        onNodeDoubleClick: (node) => {
+          const graphNode = filteredGraph.nodes.find((n) => n.id === node.id);
+          if (!graphNode) {
+            return;
+          }
+          onNavigateToNode({ id: graphNode.id, label: graphNode.label, type: graphNode.type });
+        },
         onCanvasClick: () => {
           setSelectedNodeId(null);
         },
       }),
-    [],
+    [filteredGraph.nodes, onNavigateToNode],
   );
 
   const handleZoomIn = () => {
@@ -306,6 +352,22 @@ export function GraphVisualization({
             {selectedNode.primaryProfession && selectedNode.primaryProfession.length > 0 && <span>Professions: {selectedNode.primaryProfession.join(", ")}</span>}
             {typeof selectedNode.birthYear === "number" && <span>Birth Year: {selectedNode.birthYear}</span>}
             {typeof selectedNode.deathYear === "number" && <span>Death Year: {selectedNode.deathYear}</span>}
+
+            <div className="md:col-span-2 mt-1 border-t border-neutral-800 pt-2" aria-live="polite">
+              <p className="text-neutral-400">Description</p>
+              {itemDetailsQuery.isLoading && <p className="mt-1 text-neutral-300">Loading description...</p>}
+
+              {!itemDetailsQuery.isLoading && itemDetailsQuery.data?.description && (
+                <div className="mt-1 space-y-1">
+                  <p className="text-neutral-200 leading-relaxed">{itemDetailsQuery.data.description}</p>
+                  {itemDetailsQuery.isFetching && <p className="text-[10px] text-neutral-500">Refreshing...</p>}
+                </div>
+              )}
+
+              {!itemDetailsQuery.isLoading && !itemDetailsQuery.data?.description && itemDetailsQuery.isError && (
+                <p className="mt-1 text-amber-300">{formatItemDetailsErrorMessage(itemDetailsQuery.error)}</p>
+              )}
+            </div>
           </div>
         )}
       </div>
