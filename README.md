@@ -23,7 +23,7 @@ IMDB TSV.GZ → Parquet (back-end/data/) → DuckDB (imdb.duckdb) → Neo4j grap
 | Layer | Technology |
 |---|---|
 | Relational store | DuckDB · Parquet |
-| Graph store | Neo4j (Docker) |
+| Graph store | Neo4j |
 | Vector store | Chroma DB (similarity search + film descriptions) |
 | LLM provider | vLLM (Docker profile) · Ollama · Remote OpenAI-compatible API |
 | API | FastAPI · Granian |
