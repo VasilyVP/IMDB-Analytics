@@ -9,11 +9,13 @@ from app.api.dependencies import DuckDBDep
 from app.core.limiter import limiter
 from app.schemas.filter_params import FilterParamsResponse
 from app.schemas.graph_data import GraphDataParams, GraphDataResponse
+from app.schemas.human_to_llm_query import HumanToLlmQueryRequest, HumanToLlmQueryResponse
 from app.schemas.item_details import ItemDetailsParams, ItemDetailsResponse
 from app.schemas.items_found import ItemsFoundParams, ItemsFoundResponse
 from app.schemas.search import SearchQueryParams, SearchResponse
 from app.services import (
     graph_data_service,
+    human_to_llm_query_service,
     item_details_service,
     items_found_service,
     query_options_service,
@@ -89,4 +91,22 @@ def get_graph_data(
         raise HTTPException(
             status_code=503,
             detail="Graph database is temporarily unavailable",
+        ) from exc
+
+
+@router.post("/human-to-llm", response_model=HumanToLlmQueryResponse)
+@limiter.limit("1/second")  # type: ignore[misc]
+def post_human_to_llm_query(
+    request: Request,
+    duckdb: DuckDBDep,
+    body: HumanToLlmQueryRequest,
+) -> HumanToLlmQueryResponse:
+    try:
+        return human_to_llm_query_service.human_to_llm_query(duckdb, body)
+    except human_to_llm_query_service.HumanToLlmQueryParseError as exc:
+        raise HTTPException(status_code=502, detail="LLM response could not be parsed") from exc
+    except human_to_llm_query_service.HumanToLlmQueryUnavailableError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Search backend is temporarily unavailable",
         ) from exc

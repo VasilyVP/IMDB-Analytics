@@ -28,6 +28,15 @@ function toGraphFilters(filters: FilterState): GraphFilters {
   };
 }
 
+function cloneFilterState(filters: FilterState): FilterState {
+  return {
+    ...filters,
+    selectedSearchResult: filters.selectedSearchResult ? { ...filters.selectedSearchResult } : null,
+    ratingRange: filters.ratingRange ? [...filters.ratingRange] as [number, number] : null,
+    yearRange: filters.yearRange ? [...filters.yearRange] as [number, number] : null,
+  };
+}
+
 export default function Analytics() {
   const [filters, setFilters] = useImmer<FilterState>(INITIAL_FILTER_STATE);
   const [graphRequestToken, setGraphRequestToken] = useState(0);
@@ -35,8 +44,19 @@ export default function Analytics() {
 
   const graphDataQuery = useGraphData(submittedGraphFilters, graphRequestToken);
 
-  const handleShowGraph = () => {
-    setSubmittedGraphFilters(toGraphFilters(filters));
+  const applyFiltersAndShowGraph = (updater: (draft: FilterState) => void) => {
+    let nextFilters: FilterState | null = null;
+
+    setFilters((draft) => {
+      updater(draft);
+      nextFilters = cloneFilterState(draft);
+    });
+
+    if (nextFilters === null) {
+      return;
+    }
+
+    setSubmittedGraphFilters(toGraphFilters(nextFilters));
     setGraphRequestToken((prev) => prev + 1);
   };
 
@@ -46,18 +66,10 @@ export default function Analytics() {
         ? { id: target.id, primaryTitle: target.label }
         : { id: target.id, name: target.label };
 
-    setFilters((draft) => {
+    applyFiltersAndShowGraph((draft) => {
       draft.search = target.label;
       draft.selectedSearchResult = selectedSearchResult;
     });
-
-    const updatedFilters: FilterState = {
-      ...filters,
-      search: target.label,
-      selectedSearchResult,
-    };
-    setSubmittedGraphFilters(toGraphFilters(updatedFilters));
-    setGraphRequestToken((prev) => prev + 1);
   };
 
   return (
@@ -87,7 +99,7 @@ export default function Analytics() {
               <FilterPanel
                 filters={filters}
                 setFilters={setFilters}
-                onShowGraph={handleShowGraph}
+                applyFiltersAndShowGraph={applyFiltersAndShowGraph}
                 isGraphLoading={graphDataQuery.isLoading || graphDataQuery.isFetching}
                 hasGraphRequested={graphRequestToken > 0}
               />

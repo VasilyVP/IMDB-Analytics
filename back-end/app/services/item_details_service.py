@@ -77,7 +77,7 @@ def _get_title_item_details(
 
         # Generate human description
         human_system, human_user = build_title_description_prompt(record)
-        human_description = llm_service.generate_description(
+        human_description = llm_service.request_completion(
             system_prompt=human_system,
             user_prompt=human_user,
             max_tokens=settings.HUMAN_MAX_TOKENS,
@@ -85,7 +85,7 @@ def _get_title_item_details(
 
         # Generate embedding description
         embedding_system, embedding_user = build_title_embedding_prompt(record)
-        embedding_description = llm_service.generate_description(
+        embedding_description = llm_service.request_completion(
             system_prompt=embedding_system,
             user_prompt=embedding_user,
             max_tokens=settings.EMBEDDING_MAX_TOKENS,
@@ -139,7 +139,7 @@ def _get_person_item_details(
 
         # Generate human description
         human_system, human_user = build_person_description_prompt(record)
-        human_description = llm_service.generate_description(
+        human_description = llm_service.request_completion(
             system_prompt=human_system,
             user_prompt=human_user,
             max_tokens=settings.HUMAN_MAX_TOKENS,
@@ -147,7 +147,7 @@ def _get_person_item_details(
 
         # Generate embedding description
         embedding_system, embedding_user = build_person_embedding_prompt(record)
-        embedding_description = llm_service.generate_description(
+        embedding_description = llm_service.request_completion(
             system_prompt=embedding_system,
             user_prompt=embedding_user,
             max_tokens=settings.EMBEDDING_MAX_TOKENS,

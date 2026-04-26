@@ -18,12 +18,12 @@ _ensure_repo_root_on_path()
 from scripts.chroma_seed.llm_client import TextGenerationClient  # noqa: E402
 
 
-def generate_description(
+def request_completion(
     system_prompt: str,
     user_prompt: str,
     max_tokens: int,
 ) -> str:
-    """Generate a description by calling LLM with given prompts.
+    """Request a completion from the LLM using given prompts.
     
     Args:
         system_prompt: System prompt for the LLM
@@ -31,7 +31,7 @@ def generate_description(
         max_tokens: Maximum tokens for the response
         
     Returns:
-        Generated description text
+        Generated completion text
         
     Raises:
         RuntimeError: If generation fails
@@ -47,7 +47,7 @@ def generate_description(
             raise RuntimeError("Empty completion response")
         return result_text.strip()
     except Exception as exc:  # noqa: BLE001
-        raise RuntimeError(f"Description generation failed: {exc}") from exc
+        raise RuntimeError(f"LLM request failed: {exc}") from exc
 
 
 def _build_client() -> TextGenerationClient:

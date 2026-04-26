@@ -82,7 +82,7 @@ class ItemDetailsServiceTests(unittest.TestCase):
             ),
             patch.object(
                 item_details_service.llm_service,
-                "generate_description",
+                "request_completion",
                 side_effect=["Generated human description", "Generated embedding"],
             ) as mocked_generate,
             patch.object(
@@ -143,7 +143,7 @@ class ItemDetailsServiceTests(unittest.TestCase):
             ),
             patch.object(
                 item_details_service.llm_service,
-                "generate_description",
+                "request_completion",
                 side_effect=RuntimeError("llm failed"),
             ),
         ):
