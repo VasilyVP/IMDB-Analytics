@@ -97,11 +97,7 @@ def _classify_query(query: str) -> ClassifiedQuery:
             max_tokens=300,
         )
 
-        print("LLM completion:", completion)  # Debugging output
-
         payload = _extract_json_payload(completion)
-
-        print("Extracted payload:", payload)  # Debugging output
         
         return ClassifiedQuery.model_validate(payload)
     except Exception as exc:  # noqa: BLE001

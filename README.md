@@ -1,8 +1,8 @@
 # IMDB Insights
 
-Full-stack app for graph analytics and instant querying over the IMDB dataset — Neo4j for graph traversals, DuckDB for relational queries, and Chroma DB for similarity search and storing film descriptions, served via FastAPI to a React front-end.
+Full-stack app for graph analytics and instant querying over the IMDB dataset — Neo4j for graph traversals, DuckDB for relational queries, and Chroma DB for similarity search and storing film descriptions, served via FastAPI to a React front-end. It also includes AI-assisted exploration features that let you ask natural-language questions and discover related titles through semantic search, with OpenAI-compatible LLM backends via Docker Compose vLLM profile, local Ollama, or remote model providers.
 
-The project is designed for fast local iteration:
+The project is designed for fast iteration:
 
 - ETL pipeline from IMDB TSV files to queryable stores
 - REST API layer with clear endpoint -> service -> repository boundaries
@@ -15,6 +15,8 @@ IMDB TSV.GZ → Parquet (back-end/data/) → DuckDB (imdb.duckdb) → Neo4j grap
                                                 \             ↘
                                                  \→ Chroma DB (similarity + film descriptions)
                                                   ↓
+                            LLM (vLLM via Docker profile | Ollama | remote OpenAI-compatible)
+                                                  ↓
                                     FastAPI (back-end/) → React + Vite (front-end/)
 ```
 
@@ -23,6 +25,7 @@ IMDB TSV.GZ → Parquet (back-end/data/) → DuckDB (imdb.duckdb) → Neo4j grap
 | Relational store | DuckDB · Parquet |
 | Graph store | Neo4j (Docker) |
 | Vector store | Chroma DB (similarity search + film descriptions) |
+| LLM provider | vLLM (Docker profile) · Ollama · Remote OpenAI-compatible API |
 | API | FastAPI · Granian |
 | Front-end | React 19 · React Router 7 · TypeScript · Vite · Tailwind CSS 4 · shadcn/ui |
 
@@ -31,6 +34,7 @@ IMDB TSV.GZ → Parquet (back-end/data/) → DuckDB (imdb.duckdb) → Neo4j grap
 - Analytics queries from columnar data stores over IMDB titles, people, and ratings
 - Graph traversal use cases powered by Neo4j relationship modeling
 - Similarity search over title descriptions with Chroma DB
+- AI-assisted data exploration with natural-language query support and semantic discovery
 - Filter-driven front-end workflows backed by stable API contracts
 
 ## Project Layout
